@@ -1,5 +1,30 @@
 // MetaMask Approval Guard - Background Service Worker
 
+// ===== EVENT LOGGING =====
+async function logEvent(eventType, details = {}) {
+  const event = {
+    timestamp: new Date().toISOString(),
+    type: eventType,
+    url: details.url || null,
+    ...details
+  };
+  
+  try {
+    const { eventLog = [] } = await chrome.storage.local.get('eventLog');
+    eventLog.push(event);
+    // Keep only last 100 events to avoid storage bloat
+    if (eventLog.length > 100) {
+      eventLog.shift();
+    }
+    await chrome.storage.local.set({ eventLog });
+    console.log(`[EventLog] ${eventType}:`, event);
+  } catch (e) {
+    console.error('[EventLog] Failed to log event:', e);
+  }
+}
+
+// ===== END EVENT LOGGING =====
+
 // Known malicious contract addresses (blacklist)
 const BLACKLIST = [
   "0x0000000000000000000000000000000000000001", // Example malicious address
@@ -37,6 +62,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         analysis: analysis
       });
 
+      // Log: Transaction intercepted & warning displayed
+      logEvent('TRANSACTION_INTERCEPTED', {
+        url: sender.tab?.url,
+        contractAddress: analysis.contractAddress,
+        methodName: analysis.methodName,
+        spender: analysis.spender,
+        isUnlimited: analysis.isUnlimited,
+        isBlacklisted: analysis.isBlacklisted,
+        risks: analysis.risks
+      });
+      logEvent('WARNING_DISPLAYED', {
+        url: sender.tab?.url,
+        txId: txId,
+        type: 'transaction'
+      });
+
       // Send back that we need user confirmation
       sendResponse({
         action: "SHOW_WARNING",
@@ -52,6 +93,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "USER_DECISION") {
     const pending = pendingTransactions.get(message.txId);
     if (pending) {
+      // Log: User decision (block or proceed)
+      logEvent('USER_DECISION', {
+        url: pending.transaction?.to ? undefined : null,
+        txId: message.txId,
+        decision: message.allow ? 'PROCEED' : 'BLOCK',
+        contractAddress: pending.analysis?.contractAddress,
+        methodName: pending.analysis?.methodName
+      });
+
       // Notify the content script of the decision
       chrome.tabs.sendMessage(pending.tabId, {
         type: "TRANSACTION_DECISION",
@@ -67,6 +117,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "GET_PENDING_TX") {
     const pending = pendingTransactions.get(message.txId);
     sendResponse(pending || null);
+    return true;
+  }
+
+  // Handle log events from content script (for signatures)
+  if (message.type === "LOG_EVENT") {
+    logEvent(message.eventType, message.details);
+    sendResponse({ success: true });
     return true;
   }
 });

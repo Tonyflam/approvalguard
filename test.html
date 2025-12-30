@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MetaMask Approval Guard - Test Page</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: white;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+      color: #4fc3f7;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      margin-bottom: 40px;
+    }
+    .status {
+      background: #0d1b2a;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .status-dot {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 10px;
+    }
+    .status-dot.connected { background: #4caf50; }
+    .status-dot.disconnected { background: #f44336; }
+    .test-section {
+      background: #0d1b2a;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .test-section h2 {
+      font-size: 18px;
+      margin-bottom: 8px;
+      color: #4fc3f7;
+    }
+    .test-section p {
+      color: #888;
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+    .danger-label {
+      background: #ff4444;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-left: 8px;
+    }
+    .safe-label {
+      background: #4caf50;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-left: 8px;
+    }
+    button {
+      background: #4fc3f7;
+      color: #1a1a2e;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: #81d4fa;
+    }
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+    .result {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: none;
+    }
+    .result.success {
+      background: rgba(76, 175, 80, 0.2);
+      border: 1px solid #4caf50;
+      display: block;
+    }
+    .result.error {
+      background: rgba(244, 67, 54, 0.2);
+      border: 1px solid #f44336;
+      display: block;
+    }
+    .result.blocked {
+      background: rgba(255, 152, 0, 0.2);
+      border: 1px solid #ff9800;
+      display: block;
+    }
+    .connect-btn {
+      background: #f6851b;
+    }
+    .connect-btn:hover {
+      background: #e2761b;
+    }
+    code {
+      background: #16213e;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .info-box {
+      background: rgba(79, 195, 247, 0.1);
+      border: 1px solid #4fc3f7;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+    .info-box h3 {
+      margin-bottom: 8px;
+      color: #4fc3f7;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🛡️ MetaMask Approval Guard</h1>
+    <p class="subtitle">Test Page for Extension Verification</p>
+
+    <div class="status" id="walletStatus">
+      <span class="status-dot disconnected" id="statusDot"></span>
+      <span id="statusText">MetaMask not connected</span>
+    </div>
+
+    <div class="test-section">
+      <button class="connect-btn" id="connectBtn" onclick="connectWallet()">
+        🦊 Connect MetaMask
+      </button>
+      <div class="result" id="connectResult"></div>
+    </div>
+
+    <div class="info-box">
+      <h3>ℹ️ How to Test</h3>
+      <p>Click the test buttons below. If the extension is working, you should see a <strong>blocking warning overlay</strong> for dangerous approvals (marked with 🔴). Safe transactions (marked with 🟢) should pass through normally.</p>
+    </div>
+
+    <!-- Test 1: Unlimited ERC-20 Approval -->
+    <div class="test-section">
+      <h2>Test 1: Unlimited ERC-20 Approval <span class="danger-label">🔴 DANGEROUS</span></h2>
+      <p>Simulates <code>approve(spender, MAX_UINT256)</code> - the extension SHOULD block this!</p>
+      <button onclick="testUnlimitedApproval()" id="test1Btn" disabled>
+        Trigger Unlimited Approval
+      </button>
+      <div class="result" id="test1Result"></div>
+    </div>
+
+    <!-- Test 2: NFT setApprovalForAll -->
+    <div class="test-section">
+      <h2>Test 2: NFT setApprovalForAll <span class="danger-label">🔴 DANGEROUS</span></h2>
+      <p>Simulates <code>setApprovalForAll(operator, true)</code> - the extension SHOULD block this!</p>
+      <button onclick="testSetApprovalForAll()" id="test2Btn" disabled>
+        Trigger NFT Approval
+      </button>
+      <div class="result" id="test2Result"></div>
+    </div>
+
+    <!-- Test 3: Blacklisted Address -->
+    <div class="test-section">
+      <h2>Test 3: Blacklisted Contract <span class="danger-label">🔴 DANGEROUS</span></h2>
+      <p>Sends approval to a blacklisted address - the extension SHOULD block this!</p>
+      <button onclick="testBlacklistedAddress()" id="test3Btn" disabled>
+        Trigger Blacklisted Approval
+      </button>
+      <div class="result" id="test3Result"></div>
+    </div>
+
+    <!-- Test 4: Small/Limited Approval -->
+    <div class="test-section">
+      <h2>Test 4: Limited Approval (100 tokens) <span class="safe-label">🟢 SAFE</span></h2>
+      <p>Simulates <code>approve(spender, 100)</code> - should pass through (no warning)</p>
+      <button onclick="testLimitedApproval()" id="test4Btn" disabled>
+        Trigger Limited Approval
+      </button>
+      <div class="result" id="test4Result"></div>
+    </div>
+
+    <!-- Test 5: Regular Transfer -->
+    <div class="test-section">
+      <h2>Test 5: Regular ETH Transfer <span class="safe-label">🟢 SAFE</span></h2>
+      <p>Simulates a normal ETH transfer - should pass through (no warning)</p>
+      <button onclick="testRegularTransfer()" id="test5Btn" disabled>
+        Trigger ETH Transfer
+      </button>
+      <div class="result" id="test5Result"></div>
+    </div>
+
+    <!-- Test 6: Permit Signature -->
+    <div class="test-section">
+      <h2>Test 6: EIP-2612 Permit Signature <span class="danger-label">🔴 PHISHING</span></h2>
+      <p>Simulates a <code>Permit</code> typed data signature - used by phishing sites to steal tokens!</p>
+      <button onclick="testPermitSignature()" id="test6Btn" disabled>
+        Trigger Permit Signature
+      </button>
+      <div class="result" id="test6Result"></div>
+    </div>
+
+    <!-- Test 7: Seaport Signature -->
+    <div class="test-section">
+      <h2>Test 7: Seaport/OpenSea Order <span class="danger-label">🔴 PHISHING</span></h2>
+      <p>Simulates a Seaport order signature - can list your NFTs for 0 ETH!</p>
+      <button onclick="testSeaportSignature()" id="test7Btn" disabled>
+        Trigger Seaport Signature
+      </button>
+      <div class="result" id="test7Result"></div>
+    </div>
+
+    <!-- Test 8: eth_sign -->
+    <div class="test-section">
+      <h2>Test 8: eth_sign (Raw Sign) <span class="danger-label">🔴 EXTREMELY DANGEROUS</span></h2>
+      <p>Simulates <code>eth_sign</code> - can sign ANY data, including transactions!</p>
+      <button onclick="testEthSign()" id="test8Btn" disabled>
+        Trigger eth_sign
+      </button>
+      <div class="result" id="test8Result"></div>
+    </div>
+  </div>
+
+  <script>
+    let userAccount = null;
+
+    // Check if MetaMask is available
+    window.addEventListener('load', async () => {
+      if (typeof window.ethereum !== 'undefined') {
+        console.log('MetaMask detected!');
+        
+        // Check if already connected
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          if (accounts.length > 0) {
+            userAccount = accounts[0];
+            updateStatus(true);
+          }
+        } catch (e) {
+          console.log('Not connected yet');
+        }
+
+        // Listen for account changes
+        window.ethereum.on('accountsChanged', (accounts) => {
+          if (accounts.length > 0) {
+            userAccount = accounts[0];
+            updateStatus(true);
+          } else {
+            userAccount = null;
+            updateStatus(false);
+          }
+        });
+      } else {
+        document.getElementById('statusText').textContent = 'MetaMask not installed!';
+        document.getElementById('connectBtn').disabled = true;
+      }
+    });
+
+    function updateStatus(connected) {
+      const dot = document.getElementById('statusDot');
+      const text = document.getElementById('statusText');
+      const buttons = document.querySelectorAll('button[id^="test"]');
+
+      if (connected) {
+        dot.className = 'status-dot connected';
+        text.textContent = `Connected: ${userAccount.slice(0, 6)}...${userAccount.slice(-4)}`;
+        buttons.forEach(btn => btn.disabled = false);
+      } else {
+        dot.className = 'status-dot disconnected';
+        text.textContent = 'MetaMask not connected';
+        buttons.forEach(btn => btn.disabled = true);
+      }
+    }
+
+    async function connectWallet() {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        userAccount = accounts[0];
+        updateStatus(true);
+        showResult('connectResult', 'success', `Connected: ${userAccount}`);
+      } catch (error) {
+        showResult('connectResult', 'error', `Error: ${error.message}`);
+      }
+    }
+
+    function showResult(elementId, type, message) {
+      const el = document.getElementById(elementId);
+      el.className = `result ${type}`;
+      el.textContent = message;
+    }
+
+    // Test 1: Unlimited ERC-20 Approval
+    async function testUnlimitedApproval() {
+      try {
+        // approve(address spender, uint256 amount)
+        // Function selector: 0x095ea7b3
+        const spender = '0xdef1c0ded9bec7f1a1670819833240f027b25eff'; // 0x Protocol
+        const unlimitedAmount = 'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+        
+        const data = '0x095ea7b3' + 
+          spender.slice(2).padStart(64, '0') + 
+          unlimitedAmount;
+
+        await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: userAccount,
+            to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC
+            data: data
+          }]
+        });
+        showResult('test1Result', 'success', '✅ Transaction sent (user approved)');
+      } catch (error) {
+        if (error.message.includes('blocked')) {
+          showResult('test1Result', 'blocked', '🛡️ BLOCKED by Approval Guard!');
+        } else {
+          showResult('test1Result', 'error', `❌ ${error.message}`);
+        }
+      }
+    }
+
+    // Test 2: NFT setApprovalForAll
+    async function testSetApprovalForAll() {
+      try {
+        // setApprovalForAll(address operator, bool approved)
+        // Function selector: 0xa22cb465
+        const operator = '0x1E0049783F008A0085193E00003D00cd54003c71'; // OpenSea Seaport
+        const approved = '0000000000000000000000000000000000000000000000000000000000000001';
+        
+        const data = '0xa22cb465' + 
+          operator.slice(2).padStart(64, '0') + 
+          approved;
+
+        await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: userAccount,
+            to: '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D', // BAYC
+            data: data
+          }]
+        });
+        showResult('test2Result', 'success', '✅ Transaction sent (user approved)');
+      } catch (error) {
+        if (error.message.includes('blocked')) {
+          showResult('test2Result', 'blocked', '🛡️ BLOCKED by Approval Guard!');
+        } else {
+          showResult('test2Result', 'error', `❌ ${error.message}`);
+        }
+      }
+    }
+
+    // Test 3: Blacklisted Address
+    async function testBlacklistedAddress() {
+      try {
+        // Using a blacklisted address from background.js
+        const blacklistedSpender = '0x0000000000000000000000000000000000000001';
+        const amount = '0000000000000000000000000000000000000000000000000000000000000064'; // 100
+        
+        const data = '0x095ea7b3' + 
+          blacklistedSpender.slice(2).padStart(64, '0') + 
+          amount;
+
+        await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: userAccount,
+            to: '0xdead000000000000000000000000000000000000', // Blacklisted contract
+            data: data
+          }]
+        });
+        showResult('test3Result', 'success', '✅ Transaction sent (user approved)');
+      } catch (error) {
+        if (error.message.includes('blocked')) {
+          showResult('test3Result', 'blocked', '🛡️ BLOCKED by Approval Guard!');
+        } else {
+          showResult('test3Result', 'error', `❌ ${error.message}`);
+        }
+      }
+    }
+
+    // Test 4: Limited Approval (should NOT trigger warning)
+    async function testLimitedApproval() {
+      try {
+        const spender = '0xdef1c0ded9bec7f1a1670819833240f027b25eff';
+        const limitedAmount = '0000000000000000000000000000000000000000000000000000000000000064'; // 100
+        
+        const data = '0x095ea7b3' + 
+          spender.slice(2).padStart(64, '0') + 
+          limitedAmount;
+
+        await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: userAccount,
+            to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+            data: data
+          }]
+        });
+        showResult('test4Result', 'success', '✅ Transaction passed through (no warning - as expected)');
+      } catch (error) {
+        showResult('test4Result', 'error', `❌ ${error.message}`);
+      }
+    }
+
+    // Test 5: Regular Transfer (should NOT trigger warning)
+    async function testRegularTransfer() {
+      try {
+        await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: userAccount,
+            to: '0x0000000000000000000000000000000000000002',
+            value: '0x0' // 0 ETH
+          }]
+        });
+        showResult('test5Result', 'success', '✅ Transaction passed through (no warning - as expected)');
+      } catch (error) {
+        showResult('test5Result', 'error', `❌ ${error.message}`);
+      }
+    }
+
+    // Test 6: EIP-2612 Permit Signature (SHOULD trigger warning)
+    async function testPermitSignature() {
+      try {
+        const typedData = {
+          types: {
+            EIP712Domain: [
+              { name: "name", type: "string" },
+              { name: "version", type: "string" },
+              { name: "chainId", type: "uint256" },
+              { name: "verifyingContract", type: "address" }
+            ],
+            Permit: [
+              { name: "owner", type: "address" },
+              { name: "spender", type: "address" },
+              { name: "value", type: "uint256" },
+              { name: "nonce", type: "uint256" },
+              { name: "deadline", type: "uint256" }
+            ]
+          },
+          primaryType: "Permit",
+          domain: {
+            name: "USD Coin",
+            version: "1",
+            chainId: 1,
+            verifyingContract: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+          },
+          message: {
+            owner: userAccount,
+            spender: "0xMaliciousSpenderAddress0000000000000000",
+            value: "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+            nonce: 0,
+            deadline: 9999999999
+          }
+        };
+
+        await window.ethereum.request({
+          method: 'eth_signTypedData_v4',
+          params: [userAccount, JSON.stringify(typedData)]
+        });
+        showResult('test6Result', 'success', '✅ Signature completed (user approved)');
+      } catch (error) {
+        if (error.message.includes('blocked')) {
+          showResult('test6Result', 'blocked', '🛡️ BLOCKED by Approval Guard!');
+        } else {
+          showResult('test6Result', 'error', `❌ ${error.message}`);
+        }
+      }
+    }
+
+    // Test 7: Seaport/OpenSea Order Signature (SHOULD trigger warning)
+    async function testSeaportSignature() {
+      try {
+        const typedData = {
+          types: {
+            EIP712Domain: [
+              { name: "name", type: "string" },
+              { name: "version", type: "string" },
+              { name: "chainId", type: "uint256" },
+              { name: "verifyingContract", type: "address" }
+            ],
+            OrderComponents: [
+              { name: "offerer", type: "address" },
+              { name: "offer", type: "OfferItem[]" },
+              { name: "consideration", type: "ConsiderationItem[]" }
+            ],
+            OfferItem: [
+              { name: "itemType", type: "uint8" },
+              { name: "token", type: "address" },
+              { name: "identifier", type: "uint256" }
+            ],
+            ConsiderationItem: [
+              { name: "itemType", type: "uint8" },
+              { name: "token", type: "address" },
+              { name: "amount", type: "uint256" }
+            ]
+          },
+          primaryType: "OrderComponents",
+          domain: {
+            name: "Seaport",
+            version: "1.5",
+            chainId: 1,
+            verifyingContract: "0x00000000000000ADc04C56Bf30aC9d3c0aAF14dC"
+          },
+          message: {
+            offerer: userAccount,
+            offer: [{ itemType: 2, token: "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D", identifier: "1234" }],
+            consideration: [{ itemType: 0, token: "0x0000000000000000000000000000000000000000", amount: "0" }]
+          }
+        };
+
+        await window.ethereum.request({
+          method: 'eth_signTypedData_v4',
+          params: [userAccount, JSON.stringify(typedData)]
+        });
+        showResult('test7Result', 'success', '✅ Signature completed (user approved)');
+      } catch (error) {
+        if (error.message.includes('blocked')) {
+          showResult('test7Result', 'blocked', '🛡️ BLOCKED by Approval Guard!');
+        } else {
+          showResult('test7Result', 'error', `❌ ${error.message}`);
+        }
+      }
+    }
+
+    // Test 8: eth_sign (SHOULD trigger warning - extremely dangerous)
+    async function testEthSign() {
+      try {
+        // eth_sign can sign arbitrary data - very dangerous
+        const message = "0x" + Buffer.from("Malicious message that could be a transaction").toString('hex');
+        
+        await window.ethereum.request({
+          method: 'eth_sign',
+          params: [userAccount, "0x879a053d4800c6354e76c7985a865d2922c82fb5b3f4577b2fe08b998954f2e0"]
+        });
+        showResult('test8Result', 'success', '✅ Signature completed (user approved)');
+      } catch (error) {
+        if (error.message.includes('blocked')) {
+          showResult('test8Result', 'blocked', '🛡️ BLOCKED by Approval Guard!');
+        } else {
+          showResult('test8Result', 'error', `❌ ${error.message}`);
+        }
+      }
+    }
+  </script>
+</body>
+</html>

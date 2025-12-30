@@ -245,6 +245,78 @@
       font-weight: 600;
       margin-top: 8px;
     }
+
+    /* Event Log Styles */
+    .log-container {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 14px;
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .log-entry {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      font-size: 12px;
+    }
+
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+
+    .log-icon {
+      font-size: 14px;
+    }
+
+    .log-label {
+      flex: 1;
+      color: #aaa;
+    }
+
+    .log-entry.user_decision .log-label {
+      color: #34d399;
+    }
+
+    .log-entry.user_decision:has(.log-label:contains("Blocked")) .log-label {
+      color: #f87171;
+    }
+
+    .log-time {
+      font-size: 10px;
+      color: #555;
+    }
+
+    .log-empty {
+      padding: 20px;
+      text-align: center;
+      color: #555;
+      font-size: 12px;
+    }
+
+    .log-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .clear-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: none;
+      color: #666;
+      font-size: 10px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .clear-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #888;
+    }
   </style>
 </head>
 <body>
@@ -311,6 +383,16 @@
           <div class="stat-number" id="blockedCount">0</div>
           <div class="stat-label">Blocked</div>
         </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header log-header">
+        <h4>📋 Recent Activity</h4>
+        <button class="clear-btn" id="clearLogs">Clear</button>
+      </div>
+      <div class="log-container" id="eventLog">
+        <div class="log-empty">No events yet</div>
       </div>
     </div>
   </div>
