@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Approval Guard - Stop Wallet Drain Attacks</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0a0a0f;
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 600px;
+      width: 100%;
+    }
+
+    .shield {
+      font-size: 64px;
+      margin-bottom: 32px;
+      display: inline-block;
+    }
+
+    h1 {
+      font-size: clamp(28px, 6vw, 42px);
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 24px;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+    }
+
+    .subtext {
+      font-size: clamp(16px, 3.5vw, 18px);
+      color: #888;
+      line-height: 1.6;
+      margin-bottom: 48px;
+      max-width: 480px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .cta-button {
+      display: inline-block;
+      background: #ffffff;
+      color: #0a0a0f;
+      font-size: 16px;
+      font-weight: 600;
+      padding: 16px 40px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .cta-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(255, 255, 255, 0.15);
+    }
+
+    .cta-button:active {
+      transform: translateY(0);
+    }
+
+    .origin-note {
+      margin-top: 24px;
+      font-size: 14px;
+      color: #555;
+    }
+
+    @media (max-width: 480px) {
+      .shield {
+        font-size: 48px;
+        margin-bottom: 24px;
+      }
+
+      .cta-button {
+        width: 100%;
+        padding: 18px 32px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="shield">🛡️</div>
+    
+    <h1>Stop wallet drain attacks before you sign.</h1>
+    
+    <p class="subtext">
+      This tool intercepts dangerous MetaMask transactions 
+      and warns you before malicious approvals drain your wallet.
+    </p>
+    
+    <a href="walletguard-extension.zip" class="cta-button" download>⬇️ Download Extension</a>
+    
+    <p class="origin-note" style="margin-top: 48px;">Built after losing funds to a wallet drain attack.</p>
+    
+    <div style="margin-top: 32px; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 12px; text-align: left;">
+      <p style="color: #fff; font-weight: 600; margin-bottom: 12px;">📋 How to Install:</p>
+      <ol style="color: #888; line-height: 2; padding-left: 20px; font-size: 14px;">
+        <li>Download the ZIP file above</li>
+        <li>Unzip it to a folder on your computer</li>
+        <li>Go to <code style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px;">chrome://extensions</code> in Chrome</li>
+        <li>Turn on "Developer mode" (top right toggle)</li>
+        <li>Click "Load unpacked" and select the folder</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    // Track downloads (optional - add your analytics)
+    document.querySelector('.cta-button').addEventListener('click', function() {
+      console.log('Extension downloaded');
+    });
+  </script>
+</body>
+</html>
