@@ -85,28 +85,11 @@ window.addEventListener("message", async (event) => {
       signatureDetails: sigRequest.details
     };
     
-    // Log: Signature intercepted & warning displayed
-    chrome.runtime.sendMessage({
-      type: "LOG_EVENT",
-      eventType: "SIGNATURE_INTERCEPTED",
-      details: {
-        url: window.location.href,
-        method: sigRequest.method,
-        signatureType: analysis.signatureType,
-        contractAddress: analysis.contractAddress,
-        spender: analysis.spender,
-        risks: analysis.risks
-      }
-    });
-    chrome.runtime.sendMessage({
-      type: "LOG_EVENT",
-      eventType: "WARNING_DISPLAYED",
-      details: {
-        url: window.location.href,
-        txId: txId,
-        type: 'signature'
-      }
-    });
+    // STEP 1: Signature intercepted
+    chrome.runtime.sendMessage({ type: "INCREMENT_STAT", statName: "transactionsIntercepted" });
+    
+    // STEP 2: Warning shown (signature is always risky if we got here)
+    chrome.runtime.sendMessage({ type: "INCREMENT_STAT", statName: "warningsShown" });
     
     // Show warning overlay for signature
     showSignatureWarningOverlay(txId, analysis, sigRequest);
@@ -532,18 +515,15 @@ function removeWarningOverlay() {
 }
 
 async function handleUserDecision(txId, allow) {
-  // Log decision for signature requests (handled locally, not in background)
+  // STEP 3: Log user decision for signature requests (handled locally, not in background)
   if (txId.startsWith('sig_')) {
-    chrome.runtime.sendMessage({
-      type: "LOG_EVENT",
-      eventType: "USER_DECISION",
-      details: {
-        url: window.location.href,
-        txId: txId,
-        decision: allow ? 'PROCEED' : 'BLOCK',
-        type: 'signature'
-      }
-    });
+    if (allow) {
+      // User clicked "Proceed anyway"
+      chrome.runtime.sendMessage({ type: "INCREMENT_STAT", statName: "userOverrodeWarning" });
+    } else {
+      // User clicked "Block"
+      chrome.runtime.sendMessage({ type: "INCREMENT_STAT", statName: "blockedByUser" });
+    }
   }
   
   try {

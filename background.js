@@ -1,29 +1,23 @@
 // MetaMask Approval Guard - Background Service Worker
 
-// ===== EVENT LOGGING =====
-async function logEvent(eventType, details = {}) {
-  const event = {
-    timestamp: new Date().toISOString(),
-    type: eventType,
-    url: details.url || null,
-    ...details
-  };
-  
+// ===== STATISTICS TRACKING =====
+async function incrementStat(statName) {
   try {
-    const { eventLog = [] } = await chrome.storage.local.get('eventLog');
-    eventLog.push(event);
-    // Keep only last 100 events to avoid storage bloat
-    if (eventLog.length > 100) {
-      eventLog.shift();
-    }
-    await chrome.storage.local.set({ eventLog });
-    console.log(`[EventLog] ${eventType}:`, event);
+    const stats = await chrome.storage.local.get([statName]);
+    const currentValue = stats[statName] || 0;
+    await chrome.storage.local.set({ [statName]: currentValue + 1 });
+    console.log(`[Stats] ${statName}: ${currentValue + 1}`);
   } catch (e) {
-    console.error('[EventLog] Failed to log event:', e);
+    console.error('[Stats] Failed to increment stat:', e);
   }
 }
 
-// ===== END EVENT LOGGING =====
+// Stat names:
+// - transactionsIntercepted: Every transaction/signature we analyze
+// - warningsShown: When we show a warning (dangerous detected)
+// - blockedByUser: User clicked "Block"
+// - userOverrodeWarning: User clicked "Proceed anyway"
+// ===== END STATISTICS =====
 
 // Known malicious contract addresses (blacklist)
 const BLACKLIST = [
@@ -53,6 +47,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "ANALYZE_TRANSACTION") {
     const analysis = analyzeTransaction(message.data);
     
+    // STEP 1: Transaction intercepted - always count
+    incrementStat('transactionsIntercepted');
+    
     if (analysis.isRisky) {
       // Store the pending transaction
       const txId = Date.now().toString();
@@ -62,21 +59,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         analysis: analysis
       });
 
-      // Log: Transaction intercepted & warning displayed
-      logEvent('TRANSACTION_INTERCEPTED', {
-        url: sender.tab?.url,
-        contractAddress: analysis.contractAddress,
-        methodName: analysis.methodName,
-        spender: analysis.spender,
-        isUnlimited: analysis.isUnlimited,
-        isBlacklisted: analysis.isBlacklisted,
-        risks: analysis.risks
-      });
-      logEvent('WARNING_DISPLAYED', {
-        url: sender.tab?.url,
-        txId: txId,
-        type: 'transaction'
-      });
+      // STEP 2: Warning shown (dangerous transaction detected)
+      incrementStat('warningsShown');
 
       // Send back that we need user confirmation
       sendResponse({
@@ -85,6 +69,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         analysis: analysis
       });
     } else {
+      // Safe transaction - just allow
       sendResponse({ action: "ALLOW" });
     }
     return true;
@@ -93,14 +78,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "USER_DECISION") {
     const pending = pendingTransactions.get(message.txId);
     if (pending) {
-      // Log: User decision (block or proceed)
-      logEvent('USER_DECISION', {
-        url: pending.transaction?.to ? undefined : null,
-        txId: message.txId,
-        decision: message.allow ? 'PROCEED' : 'BLOCK',
-        contractAddress: pending.analysis?.contractAddress,
-        methodName: pending.analysis?.methodName
-      });
+      // STEP 3: User decision
+      if (message.allow) {
+        // User clicked "Proceed anyway"
+        incrementStat('userOverrodeWarning');
+      } else {
+        // User clicked "Block"
+        incrementStat('blockedByUser');
+      }
 
       // Notify the content script of the decision
       chrome.tabs.sendMessage(pending.tabId, {
@@ -120,9 +105,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  // Handle log events from content script (for signatures)
-  if (message.type === "LOG_EVENT") {
-    logEvent(message.eventType, message.details);
+  // Handle stat increments from content script (for signatures)
+  if (message.type === "INCREMENT_STAT") {
+    incrementStat(message.statName);
     sendResponse({ success: true });
     return true;
   }
